@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  key-generator:
+    image: alpine:latest
+    container_name: key-generator
+    volumes:
+      - ./cluster/keys:/keys
+    command: >
+      sh -c "
+      apk add --no-cache openssl &&
+      mkdir -p /keys &&
+      if [ ! -f /keys/sa.key ] || [ ! -f /keys/sa.pub ]; then
+        openssl genrsa -out /keys/sa.key 2048 &&
+        openssl rsa -in /keys/sa.key -pubout -out /keys/sa.pub &&
+        echo 'Keys generated successfully'
+      else
+        echo 'Keys already exist, skipping generation'
+      fi
+      "
+
+  oidc-provider:
+    build:
+      context: ./cluster/oidc
+    container_name: oidc-provider
+    depends_on:
+      key-generator:
+        condition: service_completed_successfully
+    volumes:
+      - ./keys:/keys
+    environment:
+      - SERVICE_ACCOUNT_ISSUER=http://oidc-provider:8080/
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/.well-known/openid-configuration"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kind-cluster:
+    build:
+      context: ./cluster/kind
+    container_name: kind-cluster
+    depends_on:
+      - key-generator
+      - oidc-provider
+    volumes:
+      - ./cluster/keys/sa.key:/keys/sa.key
+      - ./cluster/keys/sa.pub:/keys/sa.pub
+      - ./cluster/kubeconfig:/kubeconfig
+    environment:
+      - SERVICE_ACCOUNT_ISSUER=http://oidc-provider:8080/
+    privileged: true
+    ports:
+      - "6443:6443"

@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.jsonname: cluster-pass
+metadata:
+  template: kindWI@0.0.1
+infra:
+  provider: bicep
+  path: bicep
+  
+  # azd config set alpha.deployment.stacks on
+  deploymentStacks:
+    actionOnUnmanage: 
+      resourceGroups: delete      # delete or detach
+      resources: delete           # delete or detach
+
+hooks:
+  preprovision:
+    interactive: true
+    continueOnError: false
+    shell: pwsh
+    run: ./scripts/pre-provision.ps1
+
+  postprovision:
+    interactive: true
+    continueOnError: false
+    shell: pwsh
+    run: ./scripts/post-provision.ps1
+
+  predown:
+    interactive: true
+    continueOnError: false
+    shell: pwsh
+    run: ./scripts/pre-down.ps1
