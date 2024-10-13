@@ -8,7 +8,7 @@ param (
     [string]$AZURE_RESOURCE_GROUP = $env:AZURE_RESOURCE_GROUP,
 
     [ValidateNotNullOrEmpty()]
-    [string]$CLUSTER_NAME = "kindWI",
+    [string]$CLUSTER_NAME = "kind-wi",
 
     [switch]$Help
 )
@@ -41,7 +41,7 @@ function Set-Login {
         Write-Host "Current Azure account:"
         az account show
     } catch {
-        Write-Host "Error logging in to Azure: $_" -ForegroundColor Red
+        Write-Host "Error logging in to Azure: $_"
         exit 1
     }
 }
@@ -49,26 +49,25 @@ function Set-Login {
 function Remove-AksArc {
     try {
         Write-Host "`n=================================================================="
-        Write-Host "Removing AKS Arc-enabled Kubernetes cluster"
+        Write-Host "Removing Arc-enabled Kubernetes Kind Cluster"
         Write-Host "=================================================================="
 
         # Check if the cluster exists in Azure
         $existingCluster = az connectedk8s show --name $CLUSTER_NAME --resource-group $AZURE_RESOURCE_GROUP 2>$null
         if ($existingCluster) {
-            Write-Host "Deleting Arc-enabled Kubernetes cluster $CLUSTER_NAME..."
             $result = az connectedk8s delete --name $CLUSTER_NAME --resource-group $AZURE_RESOURCE_GROUP --yes
             
             if ($LASTEXITCODE -eq 0) {
-                Write-Host "Successfully deleted Arc-enabled Kubernetes cluster" -ForegroundColor Green
+                Write-Host "Successfully deleted Arc-enabled Kubernetes Cluster" -ForegroundColor Green
             } else {
-                Write-Host "Failed to delete Arc-enabled Kubernetes cluster. Error: $result" -ForegroundColor Red
-                Write-Host "Continuing with cleanup..." -ForegroundColor Yellow
+                Write-Host "Failed to delete Arc-enabled Kubernetes Cluster. Error: $result"
+                Write-Host "Continuing with cleanup..."
             }
         } else {
-            Write-Host "Arc-enabled Kubernetes cluster $CLUSTER_NAME not found in Azure."
+            Write-Host "Arc-enabled Kubernetes Cluster $CLUSTER_NAME not found in Azure."
         }
     } catch {
-        Write-Host "Error removing Arc-enabled Kubernetes cluster: $_" -ForegroundColor Red
+        Write-Host "Error removing Arc-enabled Kubernetes cluster: $_"
     }
 }
 

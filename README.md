@@ -25,7 +25,7 @@ Kind-WI (Kind Workload Identity) is a project that sets up a local Kubernetes cl
 
 3. Verify the cluster is running:
    ```
-   export KUBECONFIG=./kubeconfig/config
+   export KUBECONFIG=./cluster/kubeconfig/config
    kubectl get nodes
    ```
 

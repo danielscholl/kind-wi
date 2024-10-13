@@ -26,7 +26,7 @@ param (
     [string]$AZURE_LOCATION = $env:AZURE_LOCATIONß,
     
     [ValidateNotNullOrEmpty()]
-    [string]$CLUSTER_NAME = "kindWI",
+    [string]$CLUSTER_NAME = "kind-wi",
 
     [switch]$Help
 )
@@ -80,7 +80,7 @@ function Register-AksArc {
 
     try {
         Write-Host "`n=================================================================="
-        Write-Host "Registering local Kind cluster as AKS Arc-enabled"
+        Write-Host "Registering Kind Cluster as Azure Arc-enabled Kubernetes"
         Write-Host "=================================================================="
 
         # Set the kubeconfig for the local Kind cluster
@@ -133,7 +133,7 @@ Set-Login
 
 # Execute Docker Compose commands
 Write-Host "`n=================================================================="
-Write-Host "Starting KindWI cluster using Docker Compose"
+Write-Host "Starting Kind Cluster "
 Write-Host "=================================================================="
 
 # Check if Docker Compose services are already running
@@ -157,28 +157,19 @@ Write-Host "=================================================================="
 
 while (-not (Test-Path $configPath)) {
     if (((Get-Date) - $startTime).TotalSeconds -gt $maxWaitTime) {
-        Write-Host "Timeout waiting for cluster. Exiting." -ForegroundColor Red
+        Write-Host "Timeout waiting for cluster. Exiting."
         exit 1
     }
-    Write-Host "Still waiting for cluster..." -NoNewline
     Start-Sleep -Seconds 5
-    Write-Host "." -NoNewline
 }
 
-Write-Host "`nCluster is ready. Proceeding with cluster info." -ForegroundColor Green
-
-# Show cluster info
-Write-Host "`n=================================================================="
-Write-Host "Cluster Info"
-Write-Host "=================================================================="
+Write-Host "`nCluster is ready. Proceeding with cluster info." 
 
 $KUBECONFIG = $configPath
 $clusterInfoOutput = kubectl --kubeconfig=$KUBECONFIG cluster-info 2>&1
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Cluster info retrieved successfully:" -ForegroundColor Green
-    Write-Host $clusterInfoOutput
-    Start-Sleep -Seconds 2
 
     Register-AksArc
 } else {
