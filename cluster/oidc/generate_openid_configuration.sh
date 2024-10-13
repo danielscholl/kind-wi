@@ -1,9 +1,12 @@
-#!/bin/bash
+#!/bin/sh
 
 # Use OIDC_HOSTNAME environment variable, defaulting to 'localhost' if not set
 HOSTNAME=${OIDC_HOSTNAME:-localhost}
 
-cat <<EOF > /oidc/.well-known/openid-configuration
+# Ensure the directory exists
+mkdir -p /var/www/html/.well-known
+
+cat <<EOF > /var/www/html/.well-known/openid-configuration
 {
   "issuer": "http://${HOSTNAME}:8080/",
   "jwks_uri": "http://${HOSTNAME}:8080/openid/v1/jwks",

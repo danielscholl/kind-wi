@@ -1,21 +1,25 @@
-#!/bin/bash
+#!/bin/sh
+
+set -e  # Exit immediately if a command exits with a non-zero status
 
 # Ensure keys are available
 if [ ! -f /keys/sa.pub ]; then
-  echo "Public key not found in /keys/sa.pub"
+  echo "Error: Public key not found in /keys/sa.pub"
   exit 1
 fi
 
 # Create directories for OIDC documents
-mkdir -p /oidc/.well-known
-mkdir -p /oidc/openid/v1
+mkdir -p /var/www/html/.well-known
+mkdir -p /var/www/html/openid/v1
 
 # Generate OIDC discovery document
-./generate_openid_configuration.sh
+/bin/sh /generate_openid_configuration.sh
 
 # Generate JWKS using the public key
-python generate_jwks.py
+/usr/bin/python3 /generate_jwks.py
 
-# Run a simple Flask server to serve the OIDC documents
-export FLASK_APP=oidc_server.py
-flask run --host=0.0.0.0 --port=8080
+# Check Nginx configuration
+nginx -t
+
+# Start Nginx
+exec nginx -g 'daemon off;'

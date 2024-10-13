@@ -27,6 +27,7 @@ nodes:
       containerPath: /etc/kubernetes/pki/sa.key
   kubeadmConfigPatches:
   - |
+    apiVersion: kubeadm.k8s.io/v1beta3
     kind: ClusterConfiguration
     apiServer:
       extraArgs:
@@ -42,10 +43,10 @@ networking:
 EOF
 
 # Create the kind cluster
-kind create cluster --name azure-workload-identity --config=/kind-config.yaml
+kind create cluster --name azure-workload-identity --config=/kind-config.yaml --image=kindest/node:v1.31.1
 
 # Export kubeconfig
-kind get kubeconfig --name azure-workload-identity > /kubeconfig/config
+kind get kubeconfig --name azure-workload-identity > /kubeconfig/config 
 
 # Update kubeconfig to use localhost instead of 0.0.0.0
 sed -i 's/0.0.0.0/localhost/g' /kubeconfig/config

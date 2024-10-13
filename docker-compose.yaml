@@ -2,13 +2,12 @@ version: '3.8'
 
 services:
   key-generator:
-    image: alpine:latest
+    image: mcr.microsoft.com/cbl-mariner/base/core:2.0
     container_name: key-generator
     volumes:
       - ./cluster/keys:/keys
     command: >
       sh -c "
-      apk add --no-cache openssl &&
       mkdir -p /keys &&
       if [ ! -f /keys/sa.key ] || [ ! -f /keys/sa.pub ]; then
         openssl genrsa -out /keys/sa.key 2048 &&
