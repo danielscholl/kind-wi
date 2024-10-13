@@ -27,7 +27,7 @@ services:
       key-generator:
         condition: service_completed_successfully
     volumes:
-      - ./keys:/keys
+      - ./cluster/keys:/keys
     environment:
       - SERVICE_ACCOUNT_ISSUER=http://oidc-provider:8080/
     ports:
