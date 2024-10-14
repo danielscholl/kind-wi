@@ -113,4 +113,30 @@ module configurationStore 'br/public:avm/res/app-configuration/configuration-sto
   }
 }
 
-output IDENTITY_PRINCIPAL_ID string = identity.outputs.principalId
+/////////////////
+// Federated
+/////////////////
+var federatedIdentityCredentials = [
+  {
+    name: 'federated-ns_default'
+    subject: 'system:serviceaccount:default:workload-identity-sa'
+  }
+
+]
+
+// THIS MIGHT NOT WORK DUE TO THE ISSUER BEING IN THE CLUSTER AND POLICY RESTRICTIONS
+// @batchSize(1)
+// module federatedCredentials './federated_identity.bicep' = [for (cred, index) in federatedIdentityCredentials: {
+//   name: '${configuration.name}-${cred.name}'
+//   params: {
+//     name: cred.name
+//     audiences: [
+//       'api://AzureADTokenExchange'
+//     ]
+//     issuer: 'http://oidc-provider:8080/'
+//     userAssignedIdentityName: identity.outputs.name
+//     subject: cred.subject
+//   }
+// }]
+
+output USER_ASSIGNED_IDENTITY_CLIENT_ID string = identity.outputs.clientId

@@ -111,6 +111,108 @@ function Register-AksArc {
     }
 }
 
+function Create-ServiceAccount {
+    try {
+        Write-Host "`n=================================================================="
+        Write-Host "Checking and Creating ServiceAccount in Kind Cluster"
+        Write-Host "=================================================================="
+
+        $SERVICE_ACCOUNT_NAME = "workload-identity-sa"
+        $SERVICE_ACCOUNT_NAMESPACE = "default"
+        $USER_ASSIGNED_IDENTITY_CLIENT_ID = $env:USER_ASSIGNED_IDENTITY_CLIENT_ID
+
+        if (-not $USER_ASSIGNED_IDENTITY_CLIENT_ID) {
+            Write-Host "Error: USER_ASSIGNED_IDENTITY_CLIENT_ID environment variable is not set." -ForegroundColor Red
+            return
+        }
+
+        # Check if the ServiceAccount already exists
+        $existingServiceAccount = kubectl get serviceaccount $SERVICE_ACCOUNT_NAME -n $SERVICE_ACCOUNT_NAMESPACE -o json 2>$null
+
+        if ($existingServiceAccount) {
+            Write-Host "ServiceAccount $SERVICE_ACCOUNT_NAME already exists in namespace $SERVICE_ACCOUNT_NAMESPACE" -ForegroundColor Yellow
+        } else {
+            $serviceAccountYaml = @"
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    azure.workload.identity/client-id: $USER_ASSIGNED_IDENTITY_CLIENT_ID
+  name: $SERVICE_ACCOUNT_NAME
+  namespace: $SERVICE_ACCOUNT_NAMESPACE
+"@
+
+            $serviceAccountYaml | kubectl apply -f -
+
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "ServiceAccount created successfully" -ForegroundColor Green
+            } else {
+                Write-Host "Failed to create ServiceAccount" -ForegroundColor Red
+                return
+            }
+        }
+
+        # Create ClusterRoleBinding
+        Write-Host "`nCreating ClusterRoleBinding..."
+        $clusterRoleBindingResult = kubectl create clusterrolebinding workload-identity-binding --clusterrole cluster-admin --serviceaccount ${SERVICE_ACCOUNT_NAMESPACE}:${SERVICE_ACCOUNT_NAME} 2>&1
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "ClusterRoleBinding created successfully" -ForegroundColor Green
+        } else {
+            if ($clusterRoleBindingResult -like "*already exists*") {
+                Write-Host "ClusterRoleBinding already exists" -ForegroundColor Yellow
+            } else {
+                Write-Host "Failed to create ClusterRoleBinding. Error: $clusterRoleBindingResult" -ForegroundColor Red
+                return
+            }
+        }
+
+        # Create Secret
+        Write-Host "`nCreating Secret..."
+        $secretYaml = @"
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ${SERVICE_ACCOUNT_NAME}-secret
+  annotations:
+    kubernetes.io/service-account.name: $SERVICE_ACCOUNT_NAME
+type: kubernetes.io/service-account-token
+"@
+
+        $secretResult = $secretYaml | kubectl apply -f - 2>&1
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Secret created successfully" -ForegroundColor Green
+        } else {
+            if ($secretResult -like "*already exists*") {
+                Write-Host "Secret already exists" -ForegroundColor Yellow
+            } else {
+                Write-Host "Failed to create Secret. Error: $secretResult" -ForegroundColor Red
+            }
+        }
+
+        # Get the token and set it as an environment variable
+        Write-Host "`nRetrieving and setting the token..."
+        $token = kubectl get secret ${SERVICE_ACCOUNT_NAME}-secret -o jsonpath='{$.data.token}' | ForEach-Object { 
+            [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_)) 
+        }
+
+        if ($token) {
+            azd env set TOKEN $token
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "Token successfully set as an environment variable" -ForegroundColor Green
+            } else {
+                Write-Host "Failed to set token as an environment variable" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "Failed to retrieve token from secret" -ForegroundColor Red
+        }
+
+    } catch {
+        Write-Host "Error in Create-ServiceAccount: $_" -ForegroundColor Red
+    }
+}
+
 # Main script execution
 if ($Help) {
     Show-Help
@@ -172,6 +274,7 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Cluster info retrieved successfully:" -ForegroundColor Green
 
     Register-AksArc
+    Create-ServiceAccount
 } else {
     Write-Host "Failed to retrieve cluster info. Skipping further operations." -ForegroundColor Red
     Write-Host "Error output: $clusterInfoOutput"
